@@ -1,0 +1,444 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 750px;
+                 background-color: #242020;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 750px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "white"}, "id": 0, "label": 0, "shape": "dot", "title": "Neighbors:200"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 26, "label": 26, "shape": "dot", "title": "Neighbors:55"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 55, "label": 55, "shape": "dot", "title": "Neighbors:26"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 67, "label": 67, "shape": "dot", "title": "Neighbors:304"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 104, "label": 104, "shape": "dot", "title": "Neighbors:277"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 107, "label": 107, "shape": "dot", "title": "Neighbors:1699"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 123, "label": 123, "shape": "dot", "title": "Neighbors:334"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 200, "label": 200, "shape": "dot", "title": "Neighbors:0"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 277, "label": 277, "shape": "dot", "title": "Neighbors:104"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 304, "label": 304, "shape": "dot", "title": "Neighbors:67"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 334, "label": 334, "shape": "dot", "title": "Neighbors:123"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 348, "label": 348, "shape": "dot", "title": "Neighbors:474#525"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 369, "label": 369, "shape": "dot", "title": "Neighbors:433"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 391, "label": 391, "shape": "dot", "title": "Neighbors:515"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 433, "label": 433, "shape": "dot", "title": "Neighbors:369"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 474, "label": 474, "shape": "dot", "title": "Neighbors:348"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 515, "label": 515, "shape": "dot", "title": "Neighbors:391"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 525, "label": 525, "shape": "dot", "title": "Neighbors:348"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 566, "label": 566, "shape": "dot", "title": "Neighbors:1313"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 582, "label": 582, "shape": "dot", "title": "Neighbors:627"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 627, "label": 627, "shape": "dot", "title": "Neighbors:582"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 686, "label": 686, "shape": "dot", "title": "Neighbors:810"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 697, "label": 697, "shape": "dot", "title": "Neighbors:824"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 724, "label": 724, "shape": "dot", "title": "Neighbors:823"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 792, "label": 792, "shape": "dot", "title": "Neighbors:837"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 810, "label": 810, "shape": "dot", "title": "Neighbors:686"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 823, "label": 823, "shape": "dot", "title": "Neighbors:724"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 824, "label": 824, "shape": "dot", "title": "Neighbors:697"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 837, "label": 837, "shape": "dot", "title": "Neighbors:792"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 931, "label": 931, "shape": "dot", "title": "Neighbors:1831"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 954, "label": 954, "shape": "dot", "title": "Neighbors:1783"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 966, "label": 966, "shape": "dot", "title": "Neighbors:1024"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1024, "label": 1024, "shape": "dot", "title": "Neighbors:966"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1029, "label": 1029, "shape": "dot", "title": "Neighbors:1613"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1047, "label": 1047, "shape": "dot", "title": "Neighbors:1420"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1076, "label": 1076, "shape": "dot", "title": "Neighbors:1539"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1078, "label": 1078, "shape": "dot", "title": "Neighbors:1843"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1107, "label": 1107, "shape": "dot", "title": "Neighbors:1888"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1126, "label": 1126, "shape": "dot", "title": "Neighbors:1269"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1164, "label": 1164, "shape": "dot", "title": "Neighbors:1663"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1171, "label": 1171, "shape": "dot", "title": "Neighbors:1534"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1179, "label": 1179, "shape": "dot", "title": "Neighbors:1778"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1188, "label": 1188, "shape": "dot", "title": "Neighbors:1228"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1228, "label": 1228, "shape": "dot", "title": "Neighbors:1188"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1238, "label": 1238, "shape": "dot", "title": "Neighbors:1330"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1256, "label": 1256, "shape": "dot", "title": "Neighbors:1898"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1269, "label": 1269, "shape": "dot", "title": "Neighbors:1126"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1287, "label": 1287, "shape": "dot", "title": "Neighbors:1559"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1304, "label": 1304, "shape": "dot", "title": "Neighbors:1709"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1313, "label": 1313, "shape": "dot", "title": "Neighbors:566"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1319, "label": 1319, "shape": "dot", "title": "Neighbors:1568"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1330, "label": 1330, "shape": "dot", "title": "Neighbors:1238"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1352, "label": 1352, "shape": "dot", "title": "Neighbors:1683"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1361, "label": 1361, "shape": "dot", "title": "Neighbors:1589"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1409, "label": 1409, "shape": "dot", "title": "Neighbors:1470"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1420, "label": 1420, "shape": "dot", "title": "Neighbors:1047"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1436, "label": 1436, "shape": "dot", "title": "Neighbors:1444"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1444, "label": 1444, "shape": "dot", "title": "Neighbors:1436"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1470, "label": 1470, "shape": "dot", "title": "Neighbors:1409"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1509, "label": 1509, "shape": "dot", "title": "Neighbors:1839"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1534, "label": 1534, "shape": "dot", "title": "Neighbors:1171"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1539, "label": 1539, "shape": "dot", "title": "Neighbors:1076"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1559, "label": 1559, "shape": "dot", "title": "Neighbors:1287"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1568, "label": 1568, "shape": "dot", "title": "Neighbors:1319"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1576, "label": 1576, "shape": "dot", "title": "Neighbors:1715"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1589, "label": 1589, "shape": "dot", "title": "Neighbors:1361"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1613, "label": 1613, "shape": "dot", "title": "Neighbors:1029"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1622, "label": 1622, "shape": "dot", "title": "Neighbors:1902"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1663, "label": 1663, "shape": "dot", "title": "Neighbors:1164"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1683, "label": 1683, "shape": "dot", "title": "Neighbors:1352"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1684, "label": 1684, "shape": "dot", "title": "Neighbors:2978"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1699, "label": 1699, "shape": "dot", "title": "Neighbors:107"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1709, "label": 1709, "shape": "dot", "title": "Neighbors:1304"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1715, "label": 1715, "shape": "dot", "title": "Neighbors:1576"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1718, "label": 1718, "shape": "dot", "title": "Neighbors:2589"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1741, "label": 1741, "shape": "dot", "title": "Neighbors:1809"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1778, "label": 1778, "shape": "dot", "title": "Neighbors:1179"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1783, "label": 1783, "shape": "dot", "title": "Neighbors:954"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1809, "label": 1809, "shape": "dot", "title": "Neighbors:1741"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1831, "label": 1831, "shape": "dot", "title": "Neighbors:931"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1839, "label": 1839, "shape": "dot", "title": "Neighbors:1509"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1843, "label": 1843, "shape": "dot", "title": "Neighbors:1078"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1888, "label": 1888, "shape": "dot", "title": "Neighbors:1107"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1898, "label": 1898, "shape": "dot", "title": "Neighbors:1256"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1902, "label": 1902, "shape": "dot", "title": "Neighbors:1622"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1912, "label": 1912, "shape": "dot", "title": "Neighbors:2152"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1918, "label": 1918, "shape": "dot", "title": "Neighbors:2329"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1929, "label": 1929, "shape": "dot", "title": "Neighbors:2290"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1936, "label": 1936, "shape": "dot", "title": "Neighbors:2644"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1943, "label": 1943, "shape": "dot", "title": "Neighbors:2300"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1962, "label": 1962, "shape": "dot", "title": "Neighbors:2520"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1982, "label": 1982, "shape": "dot", "title": "Neighbors:2222"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 1983, "label": 1983, "shape": "dot", "title": "Neighbors:2058"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2045, "label": 2045, "shape": "dot", "title": "Neighbors:2386"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2054, "label": 2054, "shape": "dot", "title": "Neighbors:2537"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2056, "label": 2056, "shape": "dot", "title": "Neighbors:2300"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2058, "label": 2058, "shape": "dot", "title": "Neighbors:1983"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2088, "label": 2088, "shape": "dot", "title": "Neighbors:2468"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2095, "label": 2095, "shape": "dot", "title": "Neighbors:2462"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2108, "label": 2108, "shape": "dot", "title": "Neighbors:2559"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2111, "label": 2111, "shape": "dot", "title": "Neighbors:2511"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2125, "label": 2125, "shape": "dot", "title": "Neighbors:2463"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2152, "label": 2152, "shape": "dot", "title": "Neighbors:1912"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2154, "label": 2154, "shape": "dot", "title": "Neighbors:2492"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2180, "label": 2180, "shape": "dot", "title": "Neighbors:2458"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2222, "label": 2222, "shape": "dot", "title": "Neighbors:1982"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2223, "label": 2223, "shape": "dot", "title": "Neighbors:2289"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2233, "label": 2233, "shape": "dot", "title": "Neighbors:2521"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2237, "label": 2237, "shape": "dot", "title": "Neighbors:2340"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2266, "label": 2266, "shape": "dot", "title": "Neighbors:2551"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2289, "label": 2289, "shape": "dot", "title": "Neighbors:2223"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2290, "label": 2290, "shape": "dot", "title": "Neighbors:1929#2543"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2292, "label": 2292, "shape": "dot", "title": "Neighbors:2512"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2300, "label": 2300, "shape": "dot", "title": "Neighbors:2056#1943"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2309, "label": 2309, "shape": "dot", "title": "Neighbors:2590"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2329, "label": 2329, "shape": "dot", "title": "Neighbors:1918"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2340, "label": 2340, "shape": "dot", "title": "Neighbors:2237"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2386, "label": 2386, "shape": "dot", "title": "Neighbors:2045"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2458, "label": 2458, "shape": "dot", "title": "Neighbors:2180"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2462, "label": 2462, "shape": "dot", "title": "Neighbors:2095"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2463, "label": 2463, "shape": "dot", "title": "Neighbors:2125"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2468, "label": 2468, "shape": "dot", "title": "Neighbors:2088"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2492, "label": 2492, "shape": "dot", "title": "Neighbors:2154"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2511, "label": 2511, "shape": "dot", "title": "Neighbors:2111"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2512, "label": 2512, "shape": "dot", "title": "Neighbors:2292"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2520, "label": 2520, "shape": "dot", "title": "Neighbors:1962"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2521, "label": 2521, "shape": "dot", "title": "Neighbors:2233"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2537, "label": 2537, "shape": "dot", "title": "Neighbors:2054"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2543, "label": 2543, "shape": "dot", "title": "Neighbors:2290"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2551, "label": 2551, "shape": "dot", "title": "Neighbors:2266"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2559, "label": 2559, "shape": "dot", "title": "Neighbors:2108"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2589, "label": 2589, "shape": "dot", "title": "Neighbors:1718"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2590, "label": 2590, "shape": "dot", "title": "Neighbors:2309"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2642, "label": 2642, "shape": "dot", "title": "Neighbors:2653"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2644, "label": 2644, "shape": "dot", "title": "Neighbors:1936"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2653, "label": 2653, "shape": "dot", "title": "Neighbors:2642"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2665, "label": 2665, "shape": "dot", "title": "Neighbors:3253"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2674, "label": 2674, "shape": "dot", "title": "Neighbors:3101"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2676, "label": 2676, "shape": "dot", "title": "Neighbors:2920"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2705, "label": 2705, "shape": "dot", "title": "Neighbors:2896#3426"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2708, "label": 2708, "shape": "dot", "title": "Neighbors:3051"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2712, "label": 2712, "shape": "dot", "title": "Neighbors:3252"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2778, "label": 2778, "shape": "dot", "title": "Neighbors:3381"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2796, "label": 2796, "shape": "dot", "title": "Neighbors:3297"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2824, "label": 2824, "shape": "dot", "title": "Neighbors:3091"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2839, "label": 2839, "shape": "dot", "title": "Neighbors:3064"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2849, "label": 2849, "shape": "dot", "title": "Neighbors:3169"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2853, "label": 2853, "shape": "dot", "title": "Neighbors:3150"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2881, "label": 2881, "shape": "dot", "title": "Neighbors:3113"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2896, "label": 2896, "shape": "dot", "title": "Neighbors:2705"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2913, "label": 2913, "shape": "dot", "title": "Neighbors:3104"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2915, "label": 2915, "shape": "dot", "title": "Neighbors:3096"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2920, "label": 2920, "shape": "dot", "title": "Neighbors:2676"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2929, "label": 2929, "shape": "dot", "title": "Neighbors:3384"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2943, "label": 2943, "shape": "dot", "title": "Neighbors:3243"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2946, "label": 2946, "shape": "dot", "title": "Neighbors:3000"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 2978, "label": 2978, "shape": "dot", "title": "Neighbors:3300#1684"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3000, "label": 3000, "shape": "dot", "title": "Neighbors:2946"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3019, "label": 3019, "shape": "dot", "title": "Neighbors:3168"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3032, "label": 3032, "shape": "dot", "title": "Neighbors:3255"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3051, "label": 3051, "shape": "dot", "title": "Neighbors:2708"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3064, "label": 3064, "shape": "dot", "title": "Neighbors:2839"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3091, "label": 3091, "shape": "dot", "title": "Neighbors:2824"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3096, "label": 3096, "shape": "dot", "title": "Neighbors:2915"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3101, "label": 3101, "shape": "dot", "title": "Neighbors:2674"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3104, "label": 3104, "shape": "dot", "title": "Neighbors:2913"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3113, "label": 3113, "shape": "dot", "title": "Neighbors:2881"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3150, "label": 3150, "shape": "dot", "title": "Neighbors:2853"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3168, "label": 3168, "shape": "dot", "title": "Neighbors:3019"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3169, "label": 3169, "shape": "dot", "title": "Neighbors:2849"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3243, "label": 3243, "shape": "dot", "title": "Neighbors:2943"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3252, "label": 3252, "shape": "dot", "title": "Neighbors:2712"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3253, "label": 3253, "shape": "dot", "title": "Neighbors:2665"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3255, "label": 3255, "shape": "dot", "title": "Neighbors:3032"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3257, "label": 3257, "shape": "dot", "title": "Neighbors:3364"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3260, "label": 3260, "shape": "dot", "title": "Neighbors:3360"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3291, "label": 3291, "shape": "dot", "title": "Neighbors:3344"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3297, "label": 3297, "shape": "dot", "title": "Neighbors:2796"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3300, "label": 3300, "shape": "dot", "title": "Neighbors:2978"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3320, "label": 3320, "shape": "dot", "title": "Neighbors:3321"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3321, "label": 3321, "shape": "dot", "title": "Neighbors:3320"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3332, "label": 3332, "shape": "dot", "title": "Neighbors:3355"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3344, "label": 3344, "shape": "dot", "title": "Neighbors:3291"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3355, "label": 3355, "shape": "dot", "title": "Neighbors:3332"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3360, "label": 3360, "shape": "dot", "title": "Neighbors:3260"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3364, "label": 3364, "shape": "dot", "title": "Neighbors:3257"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3381, "label": 3381, "shape": "dot", "title": "Neighbors:2778"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3384, "label": 3384, "shape": "dot", "title": "Neighbors:2929"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3426, "label": 3426, "shape": "dot", "title": "Neighbors:2705"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3449, "label": 3449, "shape": "dot", "title": "Neighbors:3800"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3460, "label": 3460, "shape": "dot", "title": "Neighbors:3761"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3574, "label": 3574, "shape": "dot", "title": "Neighbors:3762"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3761, "label": 3761, "shape": "dot", "title": "Neighbors:3460"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3762, "label": 3762, "shape": "dot", "title": "Neighbors:3574"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3800, "label": 3800, "shape": "dot", "title": "Neighbors:3449"}]);
+                  edges = new vis.DataSet([{"from": 2839, "to": 3064}, {"from": 2309, "to": 2590}, {"from": 0, "to": 200}, {"from": 2088, "to": 2468}, {"from": 1319, "to": 1568}, {"from": 1741, "to": 1809}, {"from": 3460, "to": 3761}, {"from": 1029, "to": 1613}, {"from": 3332, "to": 3355}, {"from": 107, "to": 1699}, {"from": 954, "to": 1783}, {"from": 582, "to": 627}, {"from": 931, "to": 1831}, {"from": 1936, "to": 2644}, {"from": 1047, "to": 1420}, {"from": 1352, "to": 1683}, {"from": 2237, "to": 2340}, {"from": 67, "to": 304}, {"from": 2915, "to": 3096}, {"from": 1126, "to": 1269}, {"from": 2108, "to": 2559}, {"from": 104, "to": 277}, {"from": 3019, "to": 3168}, {"from": 2125, "to": 2463}, {"from": 1983, "to": 2058}, {"from": 697, "to": 824}, {"from": 3291, "to": 3344}, {"from": 26, "to": 55}, {"from": 1943, "to": 2300}, {"from": 2180, "to": 2458}, {"from": 2095, "to": 2462}, {"from": 1409, "to": 1470}, {"from": 2292, "to": 2512}, {"from": 1361, "to": 1589}, {"from": 2943, "to": 3243}, {"from": 1509, "to": 1839}, {"from": 2674, "to": 3101}, {"from": 1622, "to": 1902}, {"from": 2778, "to": 3381}, {"from": 2054, "to": 2537}, {"from": 2665, "to": 3253}, {"from": 1912, "to": 2152}, {"from": 2223, "to": 2289}, {"from": 1576, "to": 1715}, {"from": 3449, "to": 3800}, {"from": 2056, "to": 2300}, {"from": 2849, "to": 3169}, {"from": 2642, "to": 2653}, {"from": 1918, "to": 2329}, {"from": 391, "to": 515}, {"from": 1929, "to": 2290}, {"from": 1179, "to": 1778}, {"from": 1684, "to": 2978}, {"from": 2824, "to": 3091}, {"from": 2233, "to": 2521}, {"from": 2913, "to": 3104}, {"from": 1078, "to": 1843}, {"from": 3257, "to": 3364}, {"from": 348, "to": 474}, {"from": 2853, "to": 3150}, {"from": 369, "to": 433}, {"from": 792, "to": 837}, {"from": 1962, "to": 2520}, {"from": 1718, "to": 2589}, {"from": 2111, "to": 2511}, {"from": 2154, "to": 2492}, {"from": 2712, "to": 3252}, {"from": 1164, "to": 1663}, {"from": 1436, "to": 1444}, {"from": 3032, "to": 3255}, {"from": 3320, "to": 3321}, {"from": 3574, "to": 3762}, {"from": 3260, "to": 3360}, {"from": 2978, "to": 3300}, {"from": 2708, "to": 3051}, {"from": 2881, "to": 3113}, {"from": 686, "to": 810}, {"from": 1171, "to": 1534}, {"from": 2266, "to": 2551}, {"from": 566, "to": 1313}, {"from": 1107, "to": 1888}, {"from": 966, "to": 1024}, {"from": 1076, "to": 1539}, {"from": 2796, "to": 3297}, {"from": 2045, "to": 2386}, {"from": 348, "to": 525}, {"from": 1982, "to": 2222}, {"from": 1238, "to": 1330}, {"from": 1287, "to": 1559}, {"from": 2705, "to": 2896}, {"from": 2676, "to": 2920}, {"from": 1304, "to": 1709}, {"from": 2705, "to": 3426}, {"from": 2946, "to": 3000}, {"from": 2290, "to": 2543}, {"from": 1188, "to": 1228}, {"from": 724, "to": 823}, {"from": 123, "to": 334}, {"from": 1256, "to": 1898}, {"from": 2929, "to": 3384}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
